@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "name": "default",
+  "console": {
+    "listen_address": "127.0.0.1:19080"
+  },
+  "mock": {
+    "listen_address": "127.0.0.1:19090",
+    "request_limit": 500,
+    "routes": [
+      {
+        "id": "router-list",
+        "name": "LLM router list",
+        "description": "查询 LLM Router 列表，供 Gateway 获取路由信息。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/maas/v2/gateway/llm_router/list",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"router_list\":[]}}"
+        }
+      },
+      {
+        "id": "dynamic-config",
+        "name": "Gateway dynamic config",
+        "description": "获取 Gateway 动态配置，例如租户标签。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/maas/v2/gateway/dynamic_config",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"maas_gateway_common_config\":{\"tenant_label_config\":{\"tenant_label_map\":{\"tenant-local\":\"local\"},\"ignored_tenant_id_list\":[]}}}}"
+        }
+      },
+      {
+        "id": "model-list",
+        "name": "MaaS model list",
+        "description": "获取模型列表及推理后端地址，用于模型发现和请求转发。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/maas/v2/model/list",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"model_list\":[{\"maas_model_id\":\"model-local-1\",\"name\":\"mock-model\",\"is_free_llm_service\":true,\"parameters\":{\"max_completion_tokens\":1024,\"is_input_content_spam\":false,\"is_output_content_spam\":false,\"endpoint_info_map_v2\":{\"default:1\":{\"base_addr\":\"http://127.0.0.1:19090\",\"url_path_chat\":\"/mock-engine/v1/chat/completions\",\"real_model_name\":\"mock-engine-model\",\"weight\":1,\"extend_info_v2\":{\"pass_through_headers\":[\"X-Mock-Scenario\"]}}}}}],\"result_total\":1}}"
+        }
+      },
+      {
+        "id": "api-key-local",
+        "name": "API key to tenant",
+        "description": "校验本地 API Key，返回所属租户、账户和 Key 信息。",
+        "enabled": true,
+        "priority": 100,
+        "method": "POST",
+        "path": "/api/internal/platform/v1/api_key/get_tenant_id",
+        "match": {
+          "json": {
+            "api_key": "local-api-key"
+          }
+        },
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"tenant_id\":\"tenant-local\",\"account_id\":\"account-local\",\"api_key_id\":\"api-key-local\",\"enabled\":1}}"
+        }
+      },
+      {
+        "id": "api-key-fallback",
+        "name": "Unknown API key",
+        "description": "模拟未知 API Key，返回空租户信息。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/platform/v1/api_key/get_tenant_id",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"tenant_id\":\"\",\"account_id\":\"account-local\",\"api_key_id\":\"api-key-unknown\",\"enabled\":1}}"
+        }
+      },
+      {
+        "id": "stop-guard",
+        "name": "Platform stop guard",
+        "description": "查询平台请求放行状态。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/platform-base/v1/stop_guard/check",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"should_next\":true,\"message\":\"\"}}"
+        }
+      },
+      {
+        "id": "usage-limit-all",
+        "name": "API key and tenant usage limits",
+        "description": "获取 API Key 与租户的请求量、Token 等用量限制。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/maas/v2/tenant_config/all_usage_limit",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"api_key_usage_limit\":{\"LLM\":{\"RPM\":0,\"RPD\":0,\"TPM\":0,\"IPM\":0}},\"tenant_usage_limit\":{\"LLM\":{\"RPM\":0,\"RPD\":0,\"TPM\":0,\"IPM\":0}}}}"
+        }
+      },
+      {
+        "id": "model-access",
+        "name": "Model tenant access",
+        "description": "检查租户是否有权访问指定模型。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/maas/v2/model_tenant_has_access",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"has_access\":true}}"
+        }
+      },
+      {
+        "id": "tenant-config",
+        "name": "Tenant config",
+        "description": "获取租户级配置。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/maas/v2/tenant_config/detail",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{\"tenant_config_info_list\":[]}}"
+        }
+      },
+      {
+        "id": "token-report",
+        "name": "Token count report",
+        "description": "接收 Gateway 上报的 Token 用量。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/api/internal/maas/v2/data_count/receive_token_count",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"code\":0,\"msg\":\"\",\"data\":{}}"
+        }
+      },
+      {
+        "id": "chat-stream",
+        "name": "OpenAI chat streaming",
+        "description": "模拟推理后端，通过 SSE 分块返回 Chat 响应。",
+        "enabled": true,
+        "priority": 100,
+        "method": "POST",
+        "path": "/mock-engine/v1/chat/completions",
+        "match": {
+          "json": {
+            "stream": true
+          }
+        },
+        "response": {
+          "status": 200,
+          "headers": {
+            "Cache-Control": "no-cache",
+            "Content-Type": "text/event-stream"
+          },
+          "sse": [
+            {
+              "data": "{\"id\":\"chatcmpl-local-1\",\"object\":\"chat.completion.chunk\",\"created\":1,\"model\":\"mock-engine-model\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"},\"finish_reason\":null}]}"
+            },
+            {
+              "data": "{\"id\":\"chatcmpl-local-1\",\"object\":\"chat.completion.chunk\",\"created\":1,\"model\":\"mock-engine-model\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hello from dev console\"},\"finish_reason\":null}]}"
+            },
+            {
+              "data": "{\"id\":\"chatcmpl-local-1\",\"object\":\"chat.completion.chunk\",\"created\":1,\"model\":\"mock-engine-model\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":5,\"total_tokens\":9}}"
+            },
+            {
+              "data": "[DONE]"
+            }
+          ]
+        }
+      },
+      {
+        "id": "chat-json",
+        "name": "OpenAI chat JSON",
+        "description": "模拟推理后端，返回完整的非流式 Chat JSON 响应。",
+        "enabled": true,
+        "priority": 0,
+        "method": "POST",
+        "path": "/mock-engine/v1/chat/completions",
+        "match": {},
+        "response": {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"id\":\"chatcmpl-local-1\",\"object\":\"chat.completion\",\"created\":1,\"model\":\"mock-engine-model\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"hello from dev console\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":5,\"total_tokens\":9}}"
+        }
+      }
+    ]
+  },
+  "gateway": {
+    "source_dir": "${MAAS_GATEWAY_DIR}",
+    "environment": "ci",
+    "http_port": 9998,
+    "metrics_port": 19092,
+    "redis": {
+      "host": "127.0.0.1",
+      "port": 16380,
+      "pool_size": 10
+    },
+    "delve": {
+      "binary": "/Users/taowang/go/bin/dlv",
+      "listen_address": "127.0.0.1:2345",
+      "continue_immediately": false,
+      "check_go_version": false
+    },
+    "maas_token": "local-mock",
+    "default_service_level": "advanced",
+    "external_services": {
+      "maas": "http://127.0.0.1:19090",
+      "maas_internal": "http://127.0.0.1:19090",
+      "platform": "http://127.0.0.1:19090",
+      "platform_internal": "http://127.0.0.1:19090",
+      "platform_maas_internal": "http://127.0.0.1:19090",
+      "platform_base": "http://127.0.0.1:19090"
+    }
+  }
+}

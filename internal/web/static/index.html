@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MaaS Gateway Dev Console</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 60 54"><path d="M28 3 35 11 47 7 44 18 55 23 43 29 48 40 34 37 30 51 23 36 9 40 16 28 5 22 20 17 18 7 27 13Z"/><path d="m12 49 34-37" class="emblem-stem"/></svg><span>NERV</span></span>
+      <div><h1>GATEWAY / EVA-01</h1><p class="eyebrow">MAAS DEVELOPMENT CONSOLE</p></div>
+    </div>
+    <div class="runtime-summary">
+      <span id="mock-status" class="status-chip">Mock · checking</span>
+      <span id="gateway-status" class="status-chip">Gateway · stopped</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero panel">
+      <div class="hero-copy">
+        <p class="section-label">LOCAL WORKSPACE <span class="hero-divider">/</span> CONFIGURATION 01</p>
+        <h2 id="profile-name">default</h2>
+        <p id="runtime-detail" class="muted">Loading runtime state…</p>
+      </div>
+      <div class="actions">
+        <button id="start-run" class="primary"><span class="action-symbol" aria-hidden="true">▶</span><span class="action-copy"><strong>RUN GATEWAY</strong><small>启动 Gateway</small></span></button>
+        <button id="start-debug" class="secondary debug-button"><span class="action-symbol" aria-hidden="true">⌘</span><span class="action-copy"><strong>DELVE DEBUG</strong><small>连接调试器</small></span></button>
+        <button id="restart" class="secondary"><span class="action-symbol" aria-hidden="true">↻</span><span class="action-copy"><strong>APPLY & RESTART</strong><small>应用并重启</small></span></button>
+        <button id="stop" class="danger"><span class="action-symbol" aria-hidden="true">■</span><span class="action-copy"><strong>STOP</strong><small>停止进程</small></span></button>
+      </div>
+    </section>
+
+    <nav class="tabs" aria-label="Console sections">
+      <button class="tab active" data-tab="settings"><span class="tab-index" aria-hidden="true">01</span><span class="tab-copy"><strong>SETTINGS</strong><small>基础配置</small></span></button>
+      <button class="tab" data-tab="routes"><span class="tab-index" aria-hidden="true">02</span><span class="tab-copy"><strong>MOCK ROUTES</strong><small>Mock 接口</small></span></button>
+      <button class="tab" data-tab="requests"><span class="tab-index" aria-hidden="true">03</span><span class="tab-copy"><strong>REQUESTS</strong><small>请求记录</small></span><span id="unmatched-count" class="badge">0</span></button>
+      <button class="tab" data-tab="logs"><span class="tab-index" aria-hidden="true">04</span><span class="tab-copy"><strong>GATEWAY LOGS</strong><small>运行日志</small></span></button>
+    </nav>
+
+    <section id="settings" class="tab-page active">
+      <div class="grid two">
+        <article class="panel">
+          <div class="panel-heading">
+            <div><p class="section-label">PROCESS CONFIG</p><h3>Gateway 配置</h3></div>
+            <button id="save-settings" class="primary compact">保存配置</button>
+          </div>
+          <div class="form-grid">
+            <label class="wide">Source directory<input data-profile="gateway.source_dir" placeholder="${MAAS_GATEWAY_DIR}"><span class="small">支持环境变量。MAAS_GATEWAY_DIR 未设置时，使用当前用户目录下的 GolandProjects/maas-gateway。</span></label>
+            <label>Environment<input data-profile="gateway.environment"></label>
+            <label>HTTP port<input type="number" data-profile="gateway.http_port"></label>
+            <label>Metrics port<input type="number" data-profile="gateway.metrics_port"></label>
+            <label>Redis host<input data-profile="gateway.redis.host"></label>
+            <label>Redis port<input type="number" data-profile="gateway.redis.port"></label>
+            <label>Redis pool size<input type="number" data-profile="gateway.redis.pool_size"></label>
+            <label>Default service level<input data-profile="gateway.default_service_level"></label>
+            <label>MaaS token<input data-profile="gateway.maas_token"></label>
+            <label class="wide">Delve binary<input data-profile="gateway.delve.binary"></label>
+            <label>Delve address<input data-profile="gateway.delve.listen_address"></label>
+            <label class="checkbox"><input type="checkbox" data-profile="gateway.delve.continue_immediately"> Continue immediately</label>
+            <label class="checkbox"><input type="checkbox" data-profile="gateway.delve.check_go_version"> Enforce Delve Go-version check</label>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><p class="section-label">UPSTREAM CONNECTIONS</p><h3>外部服务</h3></div></div>
+          <p class="muted small">默认全部指向内置 Mock，也可以单独改成真实服务或其他代理地址。</p>
+          <div class="form-grid">
+            <label class="wide">MaaS<input data-profile="gateway.external_services.maas"></label>
+            <label class="wide">MaaS Internal<input data-profile="gateway.external_services.maas_internal"></label>
+            <label class="wide">Platform<input data-profile="gateway.external_services.platform"></label>
+            <label class="wide">Platform Internal<input data-profile="gateway.external_services.platform_internal"></label>
+            <label class="wide">Platform MaaS Internal<input data-profile="gateway.external_services.platform_maas_internal"></label>
+            <label class="wide">Platform Base<input data-profile="gateway.external_services.platform_base"></label>
+            <label class="wide">Additional Gateway YAML<textarea class="code" data-profile="gateway.additional_yaml" placeholder="Tracing:&#10;  ..."></textarea></label>
+          </div>
+        </article>
+
+        <article class="panel local-services">
+          <div class="panel-heading"><div><p class="section-label">LOCAL SERVICES</p><h3>控制台与 Mock</h3></div></div>
+          <p class="muted small">监听地址修改会保存到 Profile，并在重启本控制台后生效。</p>
+          <div class="form-grid">
+            <label class="wide">Console listen address<input data-profile="console.listen_address"></label>
+            <label class="wide">Mock listen address<input data-profile="mock.listen_address"></label>
+            <label>Request history limit<input type="number" data-profile="mock.request_limit"></label>
+          </div>
+        </article>
+      </div>
+
+      <details class="panel advanced">
+        <summary>高级配置 <span class="syntax-tag">JSON</span></summary>
+        <p class="muted small">这里可以编辑完整 Profile，包括页面尚未提供专用控件的字段。</p>
+        <textarea id="profile-json" class="code large" spellcheck="false"></textarea>
+        <div class="right"><button id="save-profile-json" class="secondary">校验并保存 JSON</button></div>
+      </details>
+    </section>
+
+    <section id="routes" class="tab-page">
+      <div class="route-layout">
+        <aside class="panel route-list-panel">
+          <div class="panel-heading">
+            <div><h3 class="terminal-heading">EXTERNAL INTERFACES</h3><p class="section-subtitle">外部接口 / MOCK REGISTRY</p></div>
+            <button id="add-route" class="secondary compact">+ 新增接口</button>
+          </div>
+          <div id="route-list" class="route-list"></div>
+        </aside>
+
+        <article class="panel route-editor">
+          <div class="panel-heading">
+            <div><p class="section-label">INTERFACE / SCENARIO</p><h3 id="route-title">选择一个接口</h3><span id="route-unsaved" class="muted small hidden">有未保存的修改</span></div>
+            <div class="inline-actions">
+              <button id="save-route" class="primary compact">保存场景</button>
+              <button id="delete-route" class="danger compact">删除场景</button>
+            </div>
+          </div>
+          <p id="route-empty" class="muted small">从左侧选择接口，或新增接口来配置匹配条件和响应。</p>
+          <div id="route-form" class="hidden">
+            <div class="scenario-bar">
+              <label>匹配 / 响应场景<select id="route-scenario"></select></label>
+              <button id="add-scenario" class="secondary compact">+ 新增场景</button>
+              <button id="duplicate-scenario" class="secondary compact">复制当前场景</button>
+            </div>
+            <p class="muted small">场景按 Priority 从高到低匹配，只返回第一条命中的响应；相同优先级按配置顺序匹配。空匹配条件用于兜底，请设置较低优先级。</p>
+            <div class="form-grid route-fields">
+              <label class="field-id">ID<input id="route-id"></label>
+              <label class="field-name">场景名称<input id="route-name"></label>
+              <label class="wide field-description">接口说明（同接口共用）<input id="route-description" placeholder="简单描述这个接口的用途"></label>
+              <label class="field-method">Method<select id="route-method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label>
+              <label class="field-priority">Priority<input id="route-priority" type="number"></label>
+              <label class="wide field-path">Path<input id="route-path"></label>
+              <label class="field-status">Status<input id="route-status" type="number" min="100" max="599"></label>
+              <label class="field-delay">Delay (ms)<input id="route-delay" type="number" min="0"></label>
+              <label class="field-response">响应类型<select id="route-response-mode"><option value="body">普通响应</option><option value="sse">SSE 流式响应</option></select></label>
+              <label class="checkbox field-enabled"><input id="route-enabled" type="checkbox"> Enabled</label>
+            </div>
+            <div class="editor-grid">
+              <label><span class="field-heading">Request match <span class="syntax-tag">JSON</span></span><textarea id="route-match" class="code" spellcheck="false"></textarea></label>
+              <label><span class="field-heading">Response headers <span class="syntax-tag">JSON</span></span><textarea id="route-headers" class="code" spellcheck="false"></textarea></label>
+              <label id="body-editor" class="wide"><span class="field-heading">Response body <span class="syntax-tag">PAYLOAD</span></span><textarea id="route-body" class="code" spellcheck="false"></textarea></label>
+              <div id="sse-editor" class="wide hidden">
+                <div class="panel-heading">
+                  <div><h3>SSE 事件</h3><p class="muted small">按顺序发送。data 可填写 JSON、普通文本或 [DONE]，不需要手动转义引号。</p></div>
+                  <div class="inline-actions">
+                    <button id="add-sse-event" class="secondary compact">+ 事件</button>
+                    <button id="add-sse-done" class="secondary compact">+ [DONE]</button>
+                  </div>
+                </div>
+                <label class="sse-close">发送多少条事件后关闭<input id="route-close" type="number" min="0"><span class="small">0 表示发送全部事件；用于模拟提前断流。</span></label>
+                <div id="sse-events" class="sse-events"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="requests" class="tab-page">
+      <article class="panel">
+        <div class="panel-heading">
+          <div><p class="section-label">LIVE TRAFFIC</p><h3>请求记录</h3></div>
+          <button id="clear-requests" class="secondary compact">清空记录</button>
+        </div>
+        <p class="muted small">红色记录表示 Gateway 调用了尚未配置的外部接口。</p>
+        <div class="table-wrap">
+          <table><thead><tr><th>Time</th><th>Method</th><th>Path</th><th>Route</th><th>Status</th><th>Duration</th></tr></thead><tbody id="request-rows"></tbody></table>
+        </div>
+        <pre id="request-detail" class="detail code">Select a request to inspect headers and body.</pre>
+      </article>
+    </section>
+
+    <section id="logs" class="tab-page">
+      <article class="panel">
+        <div class="panel-heading">
+          <div><p class="section-label">PROCESS OUTPUT</p><h3>Gateway 日志</h3></div>
+          <button id="clear-logs" class="secondary compact">清空日志</button>
+        </div>
+        <div class="log-legend small"><span class="log-error">ERROR / FATAL</span><span class="log-warn">WARN</span><span class="log-info">INFO</span><span class="log-debug">DEBUG / TRACE</span></div>
+        <pre id="log-lines" class="terminal"></pre>
+      </article>
+    </section>
+  </main>
+
+  <footer class="terminal-footer"><span><i aria-hidden="true"></i> LOCAL ENVIRONMENT / MAAS GATEWAY</span><span class="footer-mode">EVA-01 / DEVELOPMENT MODE</span></footer>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
